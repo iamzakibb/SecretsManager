@@ -8,5 +8,5 @@ terraform {
 }
 #
 provider "aws" {
-  region = "" 
+  region = "us-gov-west-1"
 }
