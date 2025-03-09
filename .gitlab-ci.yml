@@ -34,7 +34,7 @@ before_script:
       unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       mv terraform /usr/local/bin/
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-    fi
+    fi-
 
 terraform_setup:
   stage: terraform_setup

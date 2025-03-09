@@ -96,7 +96,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_value" {
 resource "aws_dms_endpoint" "dms_endpoint" {
   endpoint_id   = "dms-target-endpoint"
   endpoint_type = "target" # or "source"
-  engine_name   = "aurora-postgresql" 
+  engine_name   = var.engine_name
 
   secrets_manager_access_role_arn = aws_iam_role.dms_secrets_access_role.arn 
   secrets_manager_arn            = aws_secretsmanager_secret.db_credentials.arn
