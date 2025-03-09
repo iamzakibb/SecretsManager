@@ -66,3 +66,24 @@ variable "database_name" {
   type        = string
   default     = "mydatabase"
 }
+
+variable "dms_role_name" {
+  description = "Name of the IAM role for DMS secrets access"
+  type        = string
+  default     = "DMSScretsAccessRole"
+}
+
+variable "dms_policy_name" {
+  description = "Name of the IAM policy for DMS secrets access"
+  type        = string
+  default     = "DMSScretsAccessPolicy"
+}
+
+variable "secret_arns" {
+  description = "List of secret ARNs that DMS can access"
+  type        = list(string)
+  default     = ["*"] # Replace with specific ARNs for stricter access
+}
+variable "tags" {
+  
+}

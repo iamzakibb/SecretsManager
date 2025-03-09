@@ -8,7 +8,7 @@ resource "aws_kms_key" "secrets_kms_key" {
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
-        Principal = { AWS = "<DMS_ROLE_ARN>" }, # Replace with DMS service role ARN
+        Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn }, 
         Action    = [
           "kms:Decrypt",
           "kms:DescribeKey"
@@ -17,6 +17,45 @@ resource "aws_kms_key" "secrets_kms_key" {
       }
     ]
   })
+}
+resource "aws_iam_policy" "dms_secrets_access_policy" {
+  name        = var.dms_policy_name
+  description = "Policy to allow DMS to access secrets in Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid    = "AllowSecretAccessDMS",
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
+        Resource = var.secret_arns
+      }
+    ]
+  })
+}
+resource "aws_iam_role" "dms_secrets_access_role" {
+  name = "DMSScretsAccessRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "dms.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
+  role       = aws_iam_role.dms_secrets_access_role.name
+  policy_arn = aws_iam_policy.dms_secrets_access_policy.arn
 }
 
 # 2. Secrets Manager Secret (Example for Database Credentials)
@@ -31,7 +70,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
       {
         Sid    = "AllowSecretAccessDMS",
         Effect = "Allow",
-        Principal = { AWS = "<DMS_ROLE_ARN>" }, # Replace with DMS service role ARN
+        Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn }, 
         Action = [
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
@@ -46,10 +85,10 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 resource "aws_secretsmanager_secret_version" "db_credentials_value" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
-    username = "db_username",
-    password = "db_password",
-    port     = 3306,
-    host     = "db.example.com"
+    username = var.db_username,
+    password = var.db_password,
+    port     = var.db_port,
+    host     = var.db_host,
   })
 }
 
@@ -57,13 +96,14 @@ resource "aws_secretsmanager_secret_version" "db_credentials_value" {
 resource "aws_dms_endpoint" "dms_endpoint" {
   endpoint_id   = "dms-target-endpoint"
   endpoint_type = "target" # or "source"
-  engine_name   = "mysql" # Replace with actual engine (e.g., oracle, postgres)
+  engine_name   = "aurora-postgresql" 
 
-  secrets_manager_access_role_arn = "<DMS_ROLE_ARN>" # Replace with DMS service role ARN
+  secrets_manager_access_role_arn = aws_iam_role.dms_secrets_access_role.arn 
   secrets_manager_arn            = aws_secretsmanager_secret.db_credentials.arn
   kms_key_arn                    = aws_kms_key.secrets_kms_key.arn
 
-  # Additional required fields (example values)
+  
   database_name = "mydatabase"
-  ssl_mode      = "none"
+  ssl_mode      = "require"
+  tags = var.tags
 }

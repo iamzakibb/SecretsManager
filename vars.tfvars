@@ -11,3 +11,7 @@ endpoint_id      = "prod-dms-endpoint"
 endpoint_type    = "source"
 engine_name      = "postgres"
 database_name    = "production_db"
+dms_role_name   = "Prod-DMS-Secrets-Role"
+dms_policy_name = "Prod-DMS-Secrets-Policy"
+secret_arns     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:prod-db-credentials"]
+tags = 
