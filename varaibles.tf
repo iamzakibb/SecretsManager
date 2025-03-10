@@ -88,5 +88,5 @@ variable "secret_arns" {
   default     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:prod-db-credentials"] # Replace with specific ARNs for stricter access
 }
 variable "tags" {
-  
+  default = "non-prod"
 }
