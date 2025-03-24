@@ -1,3 +1,4 @@
+data "aws_caller_identity" "current" {}
 # 1. KMS Key with Policy for DMS Decrypt Access
 resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
@@ -8,7 +9,7 @@ resource "aws_kms_key" "secrets_kms_key" {
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
-        Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn }, 
+        Principal =  { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }, 
         Action    = [
           "kms:Decrypt",
           "kms:DescribeKey"
@@ -70,7 +71,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
       {
         Sid    = "AllowSecretAccessDMS",
         Effect = "Allow",
-        Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn }, 
+        Principal =  { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }, 
         Action = [
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
