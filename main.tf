@@ -18,45 +18,45 @@ resource "aws_kms_key" "secrets_kms_key" {
     ]
   })
 }
-resource "aws_iam_policy" "dms_secrets_access_policy" {
-  name        = var.dms_policy_name
-  description = "Policy to allow DMS to access secrets in Secrets Manager"
+# resource "aws_iam_policy" "dms_secrets_access_policy" {
+#   name        = var.dms_policy_name
+#   description = "Policy to allow DMS to access secrets in Secrets Manager"
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid    = "AllowSecretAccessDMS",
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ],
-        Resource = var.secret_arns
-      }
-    ]
-  })
-}
-resource "aws_iam_role" "dms_secrets_access_role" {
-  name = "DMSScretsAccessRole"
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Sid    = "AllowSecretAccessDMS",
+#         Effect = "Allow",
+#         Action = [
+#           "secretsmanager:GetSecretValue",
+#           "secretsmanager:DescribeSecret"
+#         ],
+#         Resource = var.secret_arns
+#       }
+#     ]
+#   })
+# }
+# resource "aws_iam_role" "dms_secrets_access_role" {
+#   name = "DMSScretsAccessRole"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "dms.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
-  role       = aws_iam_role.dms_secrets_access_role.name
-  policy_arn = aws_iam_policy.dms_secrets_access_policy.arn
-}
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Principal = {
+#           Service = "dms.amazonaws.com"
+#         },
+#         Action = "sts:AssumeRole"
+#       }
+#     ]
+#   })
+# }
+# resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
+#   role       = aws_iam_role.dms_secrets_access_role.name
+#   policy_arn = aws_iam_policy.dms_secrets_access_policy.arn
+# }
 
 # 2. Secrets Manager Secret (Example for Database Credentials)
 resource "aws_secretsmanager_secret" "db_credentials" {
@@ -93,17 +93,17 @@ resource "aws_secretsmanager_secret_version" "db_credentials_value" {
 }
 
 # 4. DMS Endpoint Configuration
-resource "aws_dms_endpoint" "dms_endpoint" {
-  endpoint_id   = "dms-target-endpoint"
-  endpoint_type = "target" # or "source"
-  engine_name   = var.engine_name
+# resource "aws_dms_endpoint" "dms_endpoint" {
+#   endpoint_id   = "dms-target-endpoint"
+#   endpoint_type = "target" # or "source"
+#   engine_name   = var.engine_name
 
-  secrets_manager_access_role_arn = aws_iam_role.dms_secrets_access_role.arn 
-  secrets_manager_arn            = aws_secretsmanager_secret.db_credentials.arn
-  kms_key_arn                    = aws_kms_key.secrets_kms_key.arn
+#   secrets_manager_access_role_arn = aws_iam_role.dms_secrets_access_role.arn 
+#   secrets_manager_arn            = aws_secretsmanager_secret.db_credentials.arn
+#   kms_key_arn                    = aws_kms_key.secrets_kms_key.arn
 
   
-  database_name = "mydatabase"
-  ssl_mode      = "require"
-  tags = var.tags
-}
+#   database_name = "mydatabase"
+#   ssl_mode      = "require"
+#   tags = var.tags
+# }

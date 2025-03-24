@@ -105,26 +105,26 @@ terraform_output:
       - ecr_repository_name
     expire_in: 2 hours
 
-docker_pull_push:
-  stage: docker_pull_push
-  when: manual
-  image:
-    name: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - apk add --no-cache curl jq python3 py3-pip py3-virtualenv
-    - python3 -m venv /tmp/venv
-    - source /tmp/venv/bin/activate
-    - pip install awscli
-    - export REPOSITORY_URL=$(cat repository_url)
-    - export ECR_REPOSITORY_NAME=$(cat ecr_repository_name)
-    - assume_role "$ROLE_ARN" "docker-ecr"
-    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$REPOSITORY_URL"
-  script:
-    - docker pull "$DOTNET_IMAGE"
-    - docker tag "$DOTNET_IMAGE" "${REPOSITORY_URL}:latest"
-    - docker push "${REPOSITORY_URL}:latest"
+# docker_pull_push:
+#   stage: docker_pull_push
+#   when: manual
+#   image:
+#     name: docker:latest
+#   services:
+#     - docker:dind
+#   before_script:
+#     - apk add --no-cache curl jq python3 py3-pip py3-virtualenv
+#     - python3 -m venv /tmp/venv
+#     - source /tmp/venv/bin/activate
+#     - pip install awscli
+#     - export REPOSITORY_URL=$(cat repository_url)
+#     - export ECR_REPOSITORY_NAME=$(cat ecr_repository_name)
+#     - assume_role "$ROLE_ARN" "docker-ecr"
+#     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$REPOSITORY_URL"
+#   script:
+#     - docker pull "$DOTNET_IMAGE"
+#     - docker tag "$DOTNET_IMAGE" "${REPOSITORY_URL}:latest"
+#     - docker push "${REPOSITORY_URL}:latest"
 
 terraform_destroy:
   stage: terraform_destroy

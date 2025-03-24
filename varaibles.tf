@@ -1,11 +1,5 @@
 # variables.tf
 
-# DMS Service Role ARN
-variable "dms_role_arn" {
-  description = "ARN of the IAM role used by DMS to access Secrets Manager and KMS"
-  type        = string
-}
-
 # KMS Key Configuration
 variable "kms_key_description" {
   description = "Description for the KMS key"
@@ -45,48 +39,51 @@ variable "db_host" {
   default = "db.example.com"
 }
 
-# DMS Endpoint Configuration
-variable "endpoint_id" {
-  description = "Unique identifier for the DMS endpoint"
-  type        = string
-  default     = "dms-target-endpoint"
-}
+# Comment out or remove the DMS-related variables
+# variable "endpoint_id" {
+#   description = "Unique identifier for the DMS endpoint"
+#   type        = string
+#   default     = "dms-target-endpoint"
+# }
 
-variable "endpoint_type" {
-  description = "Type of DMS endpoint (source/target)"
-  type        = string
-  default     = "source"
-}
+# variable "endpoint_type" {
+#   description = "Type of DMS endpoint (source/target)"
+#   type        = string
+#   default     = "source"
+# }
 
-variable "engine_name" {
-  description = "Database engine (e.g., mysql, oracle, postgres)"
-  type        = string
-  default     = "aurora-postgresql" 
-}
+# variable "engine_name" {
+#   description = "Database engine (e.g., mysql, oracle, postgres)"
+#   type        = string
+#   default     = "aurora-postgresql" 
+# }
 
-variable "database_name" {
-  description = "Name of the target database"
-  type        = string
-  default     = "mydatabase"
-}
+# variable "database_name" {
+#   description = "Name of the target database"
+#   type        = string
+#   default     = "mydatabase"
+# }
 
-variable "dms_role_name" {
-  description = "Name of the IAM role for DMS secrets access"
-  type        = string
-  default     = "DMSScretsAccessRole"
-}
+# variable "dms_role_name" {
+#   description = "Name of the IAM role for DMS secrets access"
+#   type        = string
+#   default     = "DMSScretsAccessRole"
+# }
 
-variable "dms_policy_name" {
-  description = "Name of the IAM policy for DMS secrets access"
-  type        = string
-  default     = "DMSScretsAccessPolicy"
-}
+# variable "dms_policy_name" {
+#   description = "Name of the IAM policy for DMS secrets access"
+#   type        = string
+#   default     = "DMSScretsAccessPolicy"
+# }
 
-variable "secret_arns" {
-  description = "List of secret ARNs that DMS can access"
-  type        = list(string)
-  default     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:prod-db-credentials"] # Replace with specific ARNs for stricter access
-}
+# variable "secret_arns" {
+#   description = "List of secret ARNs that DMS can access"
+#   type        = list(string)
+#   default     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:prod-db-credentials"] # Replace with specific ARNs for stricter access
+# }
+
 variable "tags" {
-  default = "non-prod"
+  description = "Tags for the resources"
+  type        = string
+  default     = "non-prod"
 }
