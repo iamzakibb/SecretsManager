@@ -2,8 +2,8 @@ variables:
   AWS_REGION: "us-gov-west-1"
   DOTNET_IMAGE: "mcr.microsoft.com/dotnet/samples:aspnetapp"
   ROLE_ARN: "arn:aws-us-gov:iam::190059162174:role/cicd-cross-account-dca752-role"
-  http_proxy: "http://pixproxy.fm.org:8080"
-  HTTPS_PROXY: "http://pixproxy.fm.org:8080"
+  PROXY_URL: "http://proxy.frb.org:8080"
+  NO_PROXY: "127.0.0.1,169.254.169.254,10.170.4.143,svc.frb.org,frb.pvt,localhost"
 
 stages:
   - terraform_setup
@@ -39,36 +39,25 @@ before_script:
 terraform_setup:
   stage: terraform_setup
   script:
-    - assume_role "$ROLE_ARN" "terraform-setup"
-    - aws sts get-caller-identity
-    - echo "Attempting Terraform initialization with pre-downloaded providers..."
+    # Set proxy configuration
+    - export http_proxy="${PROXY_URL}"
+    - export https_proxy="${PROXY_URL}"
+    - export HTTP_PROXY="${PROXY_URL}"
+    - export HTTPS_PROXY="${PROXY_URL}"
+    - export no_proxy="${NO_PROXY}"
     
-    # Try to use pre-downloaded providers first
-    - mkdir -p .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64
-    - >
-      ( # Nested subshell for provider download attempt
-        wget -q -O .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 \
-        https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip || \
-        {
-          echo "Failed direct download, trying with proxy...";
-          export http_proxy="$http_proxy";
-          export HTTPS_PROXY="$HTTPS_PROXY";
-          wget -q -O .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 \
-          https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip;
-        }
-      )
-    - unzip -o .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 -d .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64
+    # Verify proxy connectivity
+    - echo "Testing Terraform registry access via proxy..."
+    - curl -Is --proxy "$PROXY_URL" https://registry.terraform.io | head -1 || echo "Proxy test failed"
     
-    # Attempt initialization with pre-downloaded providers
-    - >
-      terraform init -plugin-dir=.terraform/providers || {
-        echo "Fallback: Initializing through proxy...";
-        export HTTP_PROXY="$http_proxy";
-        export HTTPS_PROXY="$HTTPS_PROXY";
-        terraform init;
-      }
+    # Initialize Terraform
+    - echo "Initializing Terraform with proxy settings..."
+    - terraform init -input=false
     
-    - echo "Terraform setup complete."
+    # Verify providers
+    - echo "Installed providers:"
+    - ls -la .terraform/providers/ 2>/dev/null || echo "No providers directory yet"
+
   artifacts:
     paths:
       - .terraform
