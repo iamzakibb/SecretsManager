@@ -41,8 +41,33 @@ terraform_setup:
   script:
     - assume_role "$ROLE_ARN" "terraform-setup"
     - aws sts get-caller-identity
-    - echo "Initializing Terraform without remote backend..."
-    - terraform init
+    - echo "Attempting Terraform initialization with pre-downloaded providers..."
+    
+    # Try to use pre-downloaded providers first
+    - mkdir -p .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64
+    - >
+      ( # Nested subshell for provider download attempt
+        wget -q -O .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 \
+        https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip || \
+        {
+          echo "Failed direct download, trying with proxy...";
+          export http_proxy="$http_proxy";
+          export HTTPS_PROXY="$HTTPS_PROXY";
+          wget -q -O .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 \
+          https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip;
+        }
+      )
+    - unzip -o .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64/terraform-provider-aws_v5.0.0_x5 -d .terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64
+    
+    # Attempt initialization with pre-downloaded providers
+    - >
+      terraform init -plugin-dir=.terraform/providers || {
+        echo "Fallback: Initializing through proxy...";
+        export HTTP_PROXY="$http_proxy";
+        export HTTPS_PROXY="$HTTPS_PROXY";
+        terraform init;
+      }
+    
     - echo "Terraform setup complete."
   artifacts:
     paths:
