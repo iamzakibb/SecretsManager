@@ -39,28 +39,50 @@ before_script:
 terraform_setup:
   stage: terraform_setup
   script:
-    # Set proxy configuration
+    # 1. First verify basic DNS resolution
+    - echo "Testing DNS resolution..."
+    - nslookup pixproxy.frb.org || echo "DNS resolution failed"
+    - ping -c 1 pixproxy.frb.org || echo "Ping test failed"
+
+    # 2. Set proxy with validation
+    - echo "Setting proxy configuration..."
     - export http_proxy="${PROXY_URL}"
     - export https_proxy="${PROXY_URL}"
     - export HTTP_PROXY="${PROXY_URL}"
     - export HTTPS_PROXY="${PROXY_URL}"
     - export no_proxy="${NO_PROXY}"
-    
-    # Verify proxy connectivity
-    - echo "Testing Terraform registry access via proxy..."
-    - curl -Is --proxy "$PROXY_URL" https://registry.terraform.io | head -1 || echo "Proxy test failed"
-    
-    # Initialize Terraform
-    - echo "Initializing Terraform with proxy settings..."
-    - terraform init -input=false
-    
-    # Verify providers
-    - echo "Installed providers:"
-    - ls -la .terraform/providers/ 2>/dev/null || echo "No providers directory yet"
 
+    # 3. Test proxy connectivity step-by-step
+    - |
+      echo "Testing proxy connectivity..."
+      if curl -v --proxy "$PROXY_URL" http://example.com >/dev/null 2>&1; then
+        echo "Proxy HTTP test successful"
+      else
+        echo "Proxy HTTP test failed"
+      fi
+
+      if curl -vk --proxy "$PROXY_URL" https://example.com >/dev/null 2>&1; then
+        echo "Proxy HTTPS test successful"
+      else
+        echo "Proxy HTTPS test failed"
+      fi
+
+    # 4. Initialize Terraform with debug logging
+    - echo "Initializing Terraform with debug logging..."
+    - TF_LOG=DEBUG terraform init -input=false 2>&1 | tee terraform_init.log
+    - grep -i "proxy" terraform_init.log || echo "No proxy references in logs"
+
+    # 5. Fallback to direct connection if proxy fails
+    - |
+      if [ ! -d ".terraform/providers" ]; then
+        echo "Attempting fallback without proxy..."
+        unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+        terraform init -input=false
+      fi
   artifacts:
     paths:
       - .terraform
+      - terraform_init.log
       - .terraform.lock.hcl
       - terraform.tfstate
     expire_in: 2 hours
