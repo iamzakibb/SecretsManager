@@ -2,9 +2,8 @@ variables:
   AWS_REGION: "us-gov-west-1"
   DOTNET_IMAGE: "mcr.microsoft.com/dotnet/samples:aspnetapp"
   ROLE_ARN: "arn:aws-us-gov:iam::190059162174:role/cicd-cross-account-dca752-role"
-  PROXY_URL: "http://proxy.frb.org:8080"
-  NO_PROXY: "127.0.0.1,169.254.169.254,10.170.4.143,svc.frb.org,frb.pvt,localhost"
-
+  PROXY_URL: "https://p1proxy.frb.org:8080"  
+  NO_PROXY: "127.0.0.1,169.254.169.254,ami.us-gov-west-1.base.awscfs.frb.pvt,base.awscfs.frb.pvt,compliance.base.awscfs.frb.pvt,ecr.us-gov-west-1.amazonaws.com,frb.org,frb.pvt,gitlab.nit.frb.org,localhost,nit-cicd.awscfs.frb.pvt,nit.frb.org,s3.us-gov-west-1.amazonaws.com,services-nonprod.base.awscfs.frb.pvt,us-gov-west-1.amazonaws.com"
 stages:
   - terraform_setup
   - terraform_plan
@@ -29,46 +28,21 @@ before_script:
 terraform_setup:
   stage: terraform_setup
   script:
-    # 1. First verify basic DNS resolution
-    - echo "Testing DNS resolution..."
-    - nslookup pixproxy.frb.org || echo "DNS resolution failed"
-    - ping -c 1 pixproxy.frb.org || echo "Ping test failed"
-
-    # 2. Set proxy with validation
-    - echo "Setting proxy configuration..."
+    # Set proxy configuration
     - export http_proxy="${PROXY_URL}"
     - export https_proxy="${PROXY_URL}"
     - export HTTP_PROXY="${PROXY_URL}"
     - export HTTPS_PROXY="${PROXY_URL}"
     - export no_proxy="${NO_PROXY}"
+    
+    # Verify proxy connectivity
+    - echo "Testing proxy connection to Terraform registry..."
+    - curl -I --proxy "$PROXY_URL" https://registry.terraform.io || echo "Proxy test failed - continuing anyway"
+    
+    # Initialize Terraform
+    - echo "Initializing Terraform through proxy..."
+    - terraform init -input=false
 
-    # 3. Test proxy connectivity step-by-step
-    - |
-      echo "Testing proxy connectivity..."
-      if curl -v --proxy "$PROXY_URL" http://example.com >/dev/null 2>&1; then
-        echo "Proxy HTTP test successful"
-      else
-        echo "Proxy HTTP test failed"
-      fi
-
-      if curl -vk --proxy "$PROXY_URL" https://example.com >/dev/null 2>&1; then
-        echo "Proxy HTTPS test successful"
-      else
-        echo "Proxy HTTPS test failed"
-      fi
-
-    # 4. Initialize Terraform with debug logging
-    - echo "Initializing Terraform with debug logging..."
-    - TF_LOG=DEBUG terraform init -input=false 2>&1 | tee terraform_init.log
-    - grep -i "proxy" terraform_init.log || echo "No proxy references in logs"
-
-    # 5. Fallback to direct connection if proxy fails
-    - |
-      if [ ! -d ".terraform/providers" ]; then
-        echo "Attempting fallback without proxy..."
-        unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
-        terraform init -input=false
-      fi
   artifacts:
     paths:
       - .terraform
