@@ -25,16 +25,6 @@ before_script:
       export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.Credentials.SecretAccessKey')
       export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')
     }
-  - |
-    # Install Terraform using GitLab runner
-    if ! command -v terraform &> /dev/null; then
-      echo "Installing Terraform..."
-      TERRAFORM_VERSION=1.3.6
-      wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      mv terraform /usr/local/bin/
-      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-    fi
 
 terraform_setup:
   stage: terraform_setup
