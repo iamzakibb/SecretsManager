@@ -1,4 +1,5 @@
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 # 1. KMS Key with Policy for DMS Decrypt Access
 resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
@@ -9,7 +10,12 @@ resource "aws_kms_key" "secrets_kms_key" {
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
-        Principal =  { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }, 
+        Principal =  {
+          AWS = [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cfs-adt-engineer-role",
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cfs-landing-zone-deploy-role"
+          ] 
+        }, 
         Action    = [
           "kms:Decrypt",
           "kms:DescribeKey"
