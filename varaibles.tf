@@ -4,40 +4,40 @@
 variable "kms_key_description" {
   description = "Description for the KMS key"
   type        = string
-  default     = "KMS key for encrypting Secrets Manager secrets"
 }
 
 # Secrets Manager Configuration
 variable "secret_name" {
   description = "Name of the Secrets Manager secret"
   type        = string
-  default     = "dms-db-credentials"
 }
 
 variable "db_username" {
   description = "Database username"
   type        = string
-  default = "admin"
 }
 
 variable "db_password" {
   description = "Database password (mark as sensitive)"
   type        = string
   sensitive   = true
-  default = "s3cur3P@ssw0rd"
 }
 
 variable "db_port" {
   description = "Database port number"
   type        = number
-  default     = 5432 
 }
 
 variable "db_host" {
   description = "Database host address"
   type        = string
-  default = "db.example.com"
 }
+
+variable "tags" {
+  description = "Tags for the resources"
+  type        = string
+}
+
 
 # Comment out or remove the DMS-related variables
 # variable "endpoint_id" {
@@ -82,8 +82,3 @@ variable "db_host" {
 #   default     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:prod-db-credentials"] # Replace with specific ARNs for stricter access
 # }
 
-variable "tags" {
-  description = "Tags for the resources"
-  type        = string
-  default     = "non-prod"
-}
