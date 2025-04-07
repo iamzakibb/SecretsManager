@@ -14,7 +14,7 @@ resource "aws_kms_key" "secrets_kms_key" {
           AWS = [
             "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cfs-adt-engineer-role",
             "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cfs-landing-zone-deploy-role"
-          ] 
+          ]  
         }, 
         Action    = [
           "kms:Decrypt",
