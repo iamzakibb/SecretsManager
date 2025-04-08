@@ -13,7 +13,7 @@ resource "aws_kms_key" "secrets_kms_key" {
         Effect    = "Allow",
         Principal = {
           AWS = [
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.dms_secrets_access_role.name}"
+           aws_iam_role.dms_secrets_access_role.arn
           ]
         },
         Action    = [
@@ -24,11 +24,12 @@ resource "aws_kms_key" "secrets_kms_key" {
       }
     ]
   })
+  depends_on = [aws_iam_role.dms_secrets_access_role]
 }
 
 # 2. IAM Role for DMS Secrets Access
 resource "aws_iam_role" "dms_secrets_access_role" {
-  name = "DMSScretsAccessRole"
+  name = "DMSScretsAccessRole-01"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
