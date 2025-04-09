@@ -9,21 +9,29 @@ resource "aws_kms_key" "secrets_kms_key" {
     Version = "2012-10-17",
     Statement = [
       {
+        Sid       = "AllowRootAccountAccess",
+        Effect    = "Allow",
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        },
+        Action    = "kms:*",
+        Resource  = "*"
+      },
+      {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
         Principal = {
-          AWS = [
-           aws_iam_role.dms_secrets_access_role.arn
-          ]
+          AWS = aws_iam_role.dms_secrets_access_role.arn
         },
         Action    = [
           "kms:Decrypt",
           "kms:DescribeKey"
         ],
-        Resource = "*"
+        Resource  = "*"
       }
     ]
   })
+
   depends_on = [aws_iam_role.dms_secrets_access_role]
 }
 
