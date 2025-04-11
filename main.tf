@@ -33,6 +33,7 @@ resource "aws_kms_key" "secrets_kms_key" {
   })
 
   depends_on = [aws_iam_role.dms_secrets_access_role]
+  tags = var.required_tags
 }
 
 # 2. IAM Role for DMS Secrets Access
