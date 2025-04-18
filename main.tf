@@ -6,7 +6,6 @@ resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation     = true
   
-  tags = var.required_tags
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -24,11 +23,7 @@ resource "aws_kms_key" "secrets_kms_key" {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
         Principal = {
-          AWS = [
-            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cicd-cross-account-dca752-role",
-            # Add other allowed accounts/roles here
-            # "arn:aws:iam::123456789012:root" # Example additional account
-          ]
+          AWS = "${aws_iam_role.dms_secrets_access_role.arn}"
         },
         Action    = [
           "kms:Decrypt",
