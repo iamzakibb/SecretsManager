@@ -2,6 +2,59 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 # 1. KMS Key with Policy for DMS Decrypt Access
+# 2. IAM Role for DMS Secrets Access
+resource "aws_iam_role" "dms_secrets_access_role" {
+  name = "DMSScretsAccessRole-001"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "dms.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+# 3. IAM Policy for DMS Secrets Access
+resource "aws_iam_policy" "dms_secrets_access_policy" {
+  name        = "DMSSecretsAccessPolicy"
+  description = "Policy to allow DMS to access secrets in Secrets Manager and decrypt using KMS"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid    = "AllowSecretAccess",
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
+        Resource = "${aws_secretsmanager_secret.db_credentials.arn}"
+      },
+      {
+        Sid    = "AllowKMSDecrypt",
+        Effect = "Allow",
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ],
+        Resource = "${aws_kms_key.secrets_kms_key.arn}"
+      }
+    ]
+  })
+}
+# 4. Attach Policy to IAM Role
+resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
+  role       = aws_iam_role.dms_secrets_access_role.name
+  policy_arn = aws_iam_policy.dms_secrets_access_policy.arn
+}
+
 resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation     = true
@@ -49,61 +102,12 @@ resource "aws_kms_key" "secrets_kms_key" {
       }
     ]
   })
+  depends_on = [aws_iam_role.dms_secrets_access_role]
 }
 
-# 2. IAM Role for DMS Secrets Access
-resource "aws_iam_role" "dms_secrets_access_role" {
-  name = "DMSScretsAccessRole-01"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "dms.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
 
-# 3. IAM Policy for DMS Secrets Access
-resource "aws_iam_policy" "dms_secrets_access_policy" {
-  name        = "DMSSecretsAccessPolicy"
-  description = "Policy to allow DMS to access secrets in Secrets Manager and decrypt using KMS"
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid    = "AllowSecretAccess",
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ],
-        Resource = "${aws_secretsmanager_secret.db_credentials.arn}"
-      },
-      {
-        Sid    = "AllowKMSDecrypt",
-        Effect = "Allow",
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ],
-        Resource = "${aws_kms_key.secrets_kms_key.arn}"
-      }
-    ]
-  })
-}
-
-# 4. Attach Policy to IAM Role
-resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
-  role       = aws_iam_role.dms_secrets_access_role.name
-  policy_arn = aws_iam_policy.dms_secrets_access_policy.arn
-}
 
 # 5. Secrets Manager Secret (Example for Database Credentials)
 resource "aws_secretsmanager_secret" "db_credentials" {
