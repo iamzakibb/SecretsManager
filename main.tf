@@ -71,7 +71,9 @@ resource "aws_kms_key" "secrets_kms_key" {
     {
       Sid       = "AllowDMSDecryptAccess",
       Effect    = "Allow",
-      Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn },
+      Principal = {
+        AWS = "${aws_iam_role.dms_secrets_access_role.arn}"
+     },
       Action    = ["kms:Decrypt", "kms:DescribeKey"],
       Resource  = "*"
     },
