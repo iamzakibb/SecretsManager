@@ -4,7 +4,7 @@ data "aws_region" "current" {}
 # 1. KMS Key with Policy for DMS Decrypt Access
 # 2. IAM Role for DMS Secrets Access
 resource "aws_iam_role" "dms_secrets_access_role" {
-  name = "DMSScretsAccessRole-001"
+  name = "DMSScretsAccessRole-01"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -58,55 +58,48 @@ resource "aws_iam_role_policy_attachment" "dms_secrets_access_attachment" {
 resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation     = true
-  
-
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
+      # 1. Allow full access to root account (current account)
       {
         Sid       = "EnableRootPermissions",
         Effect    = "Allow",
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        Principal = { 
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" 
         },
-        Action   = "kms:*",
-        Resource = "*"
+        Action    = "kms:*",
+        Resource  = "*"
       },
+      # 2. Allow DMS role decrypt access
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
-        Principal = {
-          AWS = "${aws_iam_role.dms_secrets_access_role.arn}"
+        Principal = { 
+          AWS = "${aws_iam_role.dms_secrets_access_role.arn}" 
         },
-        Action    = [
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ],
-        Resource = "*"
+        Action    = ["kms:Decrypt", "kms:DescribeKey"],
+        Resource  = "*"
       },
+      # 3. EXPLICITLY DENY all principals EXCEPT allowed accounts
       {
         Sid       = "DenyExternalAccess",
         Effect    = "Deny",
         Principal = "*",
         Action    = "kms:*",
-        Resource = "*",
+        Resource  = "*",
         Condition = {
           StringNotEquals = {
             "aws:PrincipalAccount" = [
-              "${data.aws_caller_identity.current.account_id}",
-              # Add other allowed account IDs here
-              # "123456789012" 
+             #"${data.aws_caller_identity.current.account_id}", 
+              "190059162174"                                
             ]
           }
         }
       }
     ]
   })
-  depends_on = [aws_iam_role.dms_secrets_access_role]
 }
-
-
-
 
 
 # 5. Secrets Manager Secret (Example for Database Credentials)
