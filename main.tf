@@ -59,47 +59,41 @@ resource "aws_kms_key" "secrets_kms_key" {
   description             = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation     = true
   policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      # 1. Allow full access to your specified account
-      {
-        Sid       = "AllowSpecifiedAccount",
-        Effect    = "Allow",
-        Principal = { 
-          AWS = "arn:aws:iam::190059162174:root" 
-        },
-        Action    = "kms:*",
-        Resource  = "*"
-      },
-      # 2. Allow DMS role decrypt access (in current account)
-      {
-        Sid       = "AllowDMSDecryptAccess",
-        Effect    = "Allow",
-        Principal = { 
-          AWS = aws_iam_role.dms_secrets_access_role.arn 
-        },
-        Action    = ["kms:Decrypt", "kms:DescribeKey"],
-        Resource  = "*"
-      },
-      # 3. Deny all other principals (including current account's root)
-      {
-        Sid       = "DenyExternalAccess",
-        Effect    = "Deny",
-        Principal = "*",
-        Action    = "kms:*",
-        Resource  = "*",
-        Condition = {
-          StringNotEquals = {
-            "aws:PrincipalAccount" = [
-              "190059162174"  # Only your specified account is allowed
-            ]
-          }
+  Version = "2012-10-17",
+  Statement = [
+    {
+      Sid       = "AllowSpecifiedAccount",
+      Effect    = "Allow",
+      Principal = { AWS = "arn:aws:iam::190059162174:root" },
+      Action    = "kms:*",
+      Resource  = "*"
+    },
+    {
+      Sid       = "AllowDMSDecryptAccess",
+      Effect    = "Allow",
+      Principal = { AWS = aws_iam_role.dms_secrets_access_role.arn },
+      Action    = ["kms:Decrypt", "kms:DescribeKey"],
+      Resource  = "*"
+    },
+    {
+      Sid       = "DenyExternalAccess",
+      Effect    = "Deny",
+      Principal = "*",
+      Action    = "kms:*",
+      Resource  = "*",
+      Condition = {
+        ArnNotLike = {
+          "aws:PrincipalArn" = [
+            "arn:aws:iam::190059162174:*", 
+            "${aws_iam_role.dms_secrets_access_role.arn}"  
+          ]
         }
       }
-    ]
-  })
+    }
+  ]
+})
+depends_on = [ aws_iam_role.dms_secrets_access_role ]
 }
-
 # 5. Secrets Manager Secret (Example for Database Credentials)
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "dms-db-credentials"
