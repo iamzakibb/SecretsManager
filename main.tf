@@ -61,7 +61,7 @@ resource "aws_kms_key" "secrets_kms_key" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # 1. Allow full access to root account (current account)
+      # Allow root account
       {
         Sid       = "EnableRootPermissions",
         Effect    = "Allow",
@@ -71,36 +71,19 @@ resource "aws_kms_key" "secrets_kms_key" {
         Action    = "kms:*",
         Resource  = "*"
       },
-      # 2. Allow DMS role decrypt access
+      # Allow DMS role
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
         Principal = { 
-          AWS = "${aws_iam_role.dms_secrets_access_role.arn}" 
+          AWS = aws_iam_role.dms_secrets_access_role.arn  # <-- Remove interpolation syntax
         },
         Action    = ["kms:Decrypt", "kms:DescribeKey"],
         Resource  = "*"
-      },
-      # 3. EXPLICITLY DENY all principals EXCEPT allowed accounts
-      {
-        Sid       = "DenyExternalAccess",
-        Effect    = "Deny",
-        Principal = "*",
-        Action    = "kms:*",
-        Resource  = "*",
-        Condition = {
-          StringNotEquals = {
-            "aws:PrincipalAccount" = [
-             #"${data.aws_caller_identity.current.account_id}", 
-              "190059162174"                                
-            ]
-          }
-        }
       }
     ]
   })
 }
-
 
 # 5. Secrets Manager Secret (Example for Database Credentials)
 resource "aws_secretsmanager_secret" "db_credentials" {
