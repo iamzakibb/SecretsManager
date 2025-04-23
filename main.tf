@@ -61,17 +61,17 @@ resource "aws_kms_key" "secrets_kms_key" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # Allow root account
+      # 1. Allow full access to your specified account
       {
-        Sid       = "EnableRootPermissions",
+        Sid       = "AllowSpecifiedAccount",
         Effect    = "Allow",
         Principal = { 
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" 
+          AWS = "arn:aws:iam::190059162174:root" 
         },
         Action    = "kms:*",
         Resource  = "*"
       },
-      # Allow DMS role
+      # 2. Allow DMS role decrypt access (in current account)
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
@@ -80,6 +80,21 @@ resource "aws_kms_key" "secrets_kms_key" {
         },
         Action    = ["kms:Decrypt", "kms:DescribeKey"],
         Resource  = "*"
+      },
+      # 3. Deny all other principals (including current account's root)
+      {
+        Sid       = "DenyExternalAccess",
+        Effect    = "Deny",
+        Principal = "*",
+        Action    = "kms:*",
+        Resource  = "*",
+        Condition = {
+          StringNotEquals = {
+            "aws:PrincipalAccount" = [
+              "190059162174"  # Only your specified account is allowed
+            ]
+          }
+        }
       }
     ]
   })
