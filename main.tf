@@ -108,7 +108,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
         Sid    = "AllowDMSRoleAccess",
         Effect = "Allow",
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.dms_secrets_access_role.name}"
+          AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.dms_secrets_access_role.name}"
         },
         Action = [
           "secretsmanager:GetSecretValue",
