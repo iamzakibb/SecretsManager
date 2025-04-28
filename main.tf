@@ -64,7 +64,7 @@ resource "aws_kms_key" "secrets_kms_key" {
     {
       Sid       = "AllowSpecifiedAccount",
       Effect    = "Allow",
-      Principal = { AWS = "arn:aws:iam::190059162174:root" },
+      Principal = { AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root" },
       Action    = "kms:*",
       Resource  = "*"
     },
@@ -72,7 +72,7 @@ resource "aws_kms_key" "secrets_kms_key" {
       Sid       = "AllowDMSDecryptAccess",
       Effect    = "Allow",
       Principal = {
-        AWS = "${aws_iam_role.dms_secrets_access_role.arn}"
+        AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.dms_secrets_access_role.name}"
      },
       Action    = ["kms:Decrypt", "kms:DescribeKey"],
       Resource  = "*"
@@ -86,8 +86,7 @@ resource "aws_kms_key" "secrets_kms_key" {
       Condition = {
         ArnNotLike = {
           "aws:PrincipalArn" = [
-            "arn:aws:iam::190059162174:*", 
-            "${aws_iam_role.dms_secrets_access_role.arn}"  
+            ${data.aws_caller_identity.current.account_id}
           ]
         }
       }
