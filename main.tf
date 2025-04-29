@@ -63,22 +63,30 @@ resource "aws_kms_key" "secrets_kms_key" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
+      
       {
-        Sid       = "AllowSpecifiedAccount",
+        Sid       = "EnableRootPermissions",
         Effect    = "Allow",
-        Principal = { AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root" },
-        Action    = "kms:*",
-        Resource  = "*"
+        Principal = {
+          AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root"
+        },
+        Action   = "kms:*",
+        Resource = "*"
       },
+      
       {
         Sid       = "AllowDMSDecryptAccess",
         Effect    = "Allow",
         Principal = {
           AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.dms_secrets_access_role.name}"
         },
-        Action    = ["kms:Decrypt", "kms:DescribeKey"],
-        Resource  = "*"
+        Action    = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ],
+        Resource = "*"
       },
+      
       {
         Sid       = "DenyExternalAccess",
         Effect    = "Deny",
