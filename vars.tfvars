@@ -3,7 +3,7 @@
 # Source Database Configuration
 source_db_username = "dms_user"
 source_db_password = "s3swwv!yehs68w"
-source_db_port     = "1433"
+source_db_port     = 1433
 source_db_host     = "fr3dwvads006.rb.win.frb.org"
 
 # Target Database Configuration

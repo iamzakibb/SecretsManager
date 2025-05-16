@@ -1,10 +1,24 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# Variables (Add these to your variables.tf)
 
+# 1. Create IAM Roles (Added target role creation)
+resource "aws_iam_role" "target_dms_role" {
+  name = "adt-edm-dms-service-target-role"
 
-# 1. Create two secrets managers
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "dms.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# 2. Secrets Managers with Explicit Policies from Screenshots
 resource "aws_secretsmanager_secret" "source_db_credentials" {
   name        = "dms-db-credentials-source"
   kms_key_id  = aws_kms_key.secrets_kms_key.arn
@@ -14,13 +28,24 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
     Version = "2012-10-17",
     Statement = [
       {
-        Sid    = "AllowSourceRoleAccess",
+        Sid    = "AllowSecretsAccesstoDMS",
         Effect = "Allow",
-        Principal = { AWS = var.source_role_arn },
+        Principal = {
+          AWS = "arn:aws-us-gov:iam::198895713261:role/adt-edm-dms-service-atlanta-infobank"
+        },
         Action = [
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ],
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowListSecretstoDeployRole",
+        Effect = "Allow",
+        Principal = {
+          AWS = "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
+        },
+        Action = ["secretsmanager:DescribeSecret"],
         Resource = "*"
       }
     ]
@@ -29,7 +54,7 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
 
 resource "aws_secretsmanager_secret" "target_db_credentials" {
   name        = "${aws_secretsmanager_secret.source_db_credentials.name}-target"
-  kms_key_id  = var.kms_key_arn
+  kms_key_id  = aws_kms_key.secrets_kms_key.arn
   description = "Credentials for target database"
 
   policy = jsonencode({
@@ -38,7 +63,9 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
       {
         Sid    = "AllowTargetRoleAccess",
         Effect = "Allow",
-        Principal = { AWS = var.target_role_arn },
+        Principal = {
+          AWS = aws_iam_role.target_dms_role.arn
+        },
         Action = [
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
@@ -49,7 +76,73 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
   })
 }
 
-# 2. Secret Values
+# 3. Enhanced KMS Key Policy
+resource "aws_kms_key" "secrets_kms_key" {
+  description         = "KMS key for encrypting Secrets Manager secrets"
+  enable_key_rotation = true
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "EnableRootPermissions",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root" },
+        Action    = "kms:*",
+        Resource  = "*"
+      },
+      {
+        Sid       = "AllowSourceAccess",
+        Effect    = "Allow",
+        Principal = {
+          AWS = [
+            "arn:aws-us-gov:iam::198895713261:role/adt-edm-dms-service-atlanta-infobank",
+            "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
+          ]
+        },
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ],
+        Resource = "*"
+      },
+      {
+        Sid       = "AllowTargetAccess",
+        Effect    = "Allow",
+        Principal = {
+          AWS = aws_iam_role.target_dms_role.arn
+        },
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ],
+        Resource = "*"
+      },
+      {
+        Sid       = "DenyExternalAccess",
+        Effect    = "Deny",
+        Principal = "*",
+        Action    = "kms:*",
+        Resource  = "*",
+        Condition = {
+          ArnNotLike = {
+            "aws:PrincipalArn" = [
+              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root",
+              "arn:aws-us-gov:iam::198895713261:role/adt-edm-dms-service-atlanta-infobank",
+              "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role",
+              aws_iam_role.target_dms_role.arn
+            ]
+          }
+        }
+      }
+    ]
+  })
+}
+
+# 4. Secret Values (Unchanged)
 resource "aws_secretsmanager_secret_version" "source_credentials" {
   secret_id = aws_secretsmanager_secret.source_db_credentials.id
   secret_string = jsonencode({
@@ -67,53 +160,5 @@ resource "aws_secretsmanager_secret_version" "target_credentials" {
     password = var.target_db_password
     port     = var.target_db_port
     host     = var.target_db_host
-  })
-}
-
-# 3. KMS Key Policy Update
-resource "aws_kms_key" "secrets_kms_key" {
-  description         = "KMS key for encrypting Secrets Manager secrets"
-  enable_key_rotation = true
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid       = "EnableRootPermissions",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root" },
-        Action    = "kms:*",
-        Resource  = "*"
-      },
-      {
-        Sid       = "AllowSourceDecryptAccess",
-        Effect    = "Allow",
-        Principal = { AWS = var.source_role_arn },
-        Action    = ["kms:Decrypt", "kms:DescribeKey"],
-        Resource  = "*"
-      },
-      {
-        Sid       = "AllowTargetDecryptAccess",
-        Effect    = "Allow",
-        Principal = { AWS = var.target_role_arn },
-        Action    = ["kms:Decrypt", "kms:DescribeKey"],
-        Resource  = "*"
-      },
-      {
-        Sid       = "DenyExternalAccess",
-        Effect    = "Deny",
-        Principal = "*",
-        Action    = "kms:*",
-        Resource  = "*",
-        Condition = {
-          ArnNotLike = {
-            "aws:PrincipalArn" = [
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root",
-              var.source_role_arn,
-              var.target_role_arn
-            ]
-          }
-        }
-      }
-    ]
   })
 }
