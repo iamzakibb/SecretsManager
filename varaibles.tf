@@ -10,7 +10,9 @@ variable "target_db_password" {}
 variable "target_db_port" {}
 variable "target_db_host" {}
 
-
+variable "requires_tags" {
+  
+}
 # Comment out or remove the DMS-related variables
 # variable "endpoint_id" {
 #   description = "Unique identifier for the DMS endpoint"
