@@ -64,7 +64,7 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
         Sid    = "AllowTargetRoleAccess",
         Effect = "Allow",
         Principal = {
-          AWS = aws_iam_role.target_dms_role.arn
+          AWS = "${aws_iam_role.target_dms_role.arn}"
         },
         Action = [
           "secretsmanager:GetSecretValue",
@@ -95,9 +95,8 @@ resource "aws_kms_key" "secrets_kms_key" {
         Effect    = "Allow",
         Principal = {
           AWS = [
-            # Restrict to roles in CURRENT account
-            "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/adt-edm-dms-service-atlanta-infobank",
-            "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/cfs-landing-zone-deploy-role"
+           "arn:aws-us-gov:iam::198895713261:role/adt-edm-dms-service-atlanta-infobank",
+            "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
           ]
         },
         Action = [
@@ -112,7 +111,7 @@ resource "aws_kms_key" "secrets_kms_key" {
         Sid       = "AllowTargetAccess",
         Effect    = "Allow",
         Principal = {
-          AWS = aws_iam_role.target_dms_role.arn
+          AWS = "${aws_iam_role.target_dms_role.arn}"
         },
         Action = [
           "kms:Decrypt",
@@ -132,8 +131,9 @@ resource "aws_kms_key" "secrets_kms_key" {
           ArnNotLike = {
             "aws:PrincipalArn" = [
               "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root",
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/*", # Allow any role in current account
-              aws_iam_role.target_dms_role.arn
+              "arn:aws-us-gov:iam::198895713261:role/*", 
+              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/*",
+              "${aws_iam_role.target_dms_role.arn}"
             ]
           }
         }
