@@ -36,7 +36,12 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ],
-        Resource = "*"
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalAccount" = "198895713261"
+          }
+        }
       },
       {
         Sid    = "AllowListSecretstoDeployRole",
@@ -45,7 +50,12 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
           AWS = "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
         },
         Action = ["secretsmanager:DescribeSecret"],
-        Resource = "*"
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalAccount" = "198895713261"
+          }
+        }
       }
     ]
   })
@@ -75,7 +85,7 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
   })
 }
 
-# 3. Secure KMS Key Policy
+# 3. Fixed KMS Key Policy
 resource "aws_kms_key" "secrets_kms_key" {
   description         = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation = true
@@ -122,18 +132,36 @@ resource "aws_kms_key" "secrets_kms_key" {
         Resource = "*"
       },
       {
-        Sid       = "DenyExternalAccess",
+        # CRITICAL FIX: Explicitly allow only known accounts
+        Sid    = "AllowKnownAccounts",
+        Effect = "Allow",
+        Principal = "*",
+        Action = "kms:*",
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "aws:PrincipalAccount" = [
+              data.aws_caller_identity.current.account_id,
+              "198895713261"
+            ]
+          }
+        }
+      },
+      {
+        # CRITICAL FIX: Deny everything else
+        Sid       = "DenyEverythingElse",
         Effect    = "Deny",
         Principal = "*",
         Action    = "kms:*",
         Resource  = "*",
         Condition = {
-          ArnNotLike = {
-            "aws:PrincipalArn" = [
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root",
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/*",
-              "arn:aws-us-gov:iam::198895713261:role/*"
-            ]
+          "Not": {
+            "StringEquals": {
+              "aws:PrincipalAccount": [
+                data.aws_caller_identity.current.account_id,
+                "198895713261"
+              ]
+            }
           }
         }
       }
