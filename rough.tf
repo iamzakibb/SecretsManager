@@ -1,7 +1,7 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# 1. Create IAM Roles (unchanged)
+
 resource "aws_iam_role" "target_dms_role" {
   name = "adt-edm-dms-service-target-role"
 
@@ -17,7 +17,7 @@ resource "aws_iam_role" "target_dms_role" {
   })
 }
 
-# 2. Secrets Managers with OrgID Conditions
+
 resource "aws_secretsmanager_secret" "source_db_credentials" {
   name        = "dms-db-credentials-source"
   kms_key_id  = aws_kms_key.secrets_kms_key.arn
@@ -162,7 +162,7 @@ resource "aws_kms_key" "secrets_kms_key" {
   })
 }
 
-# 4. Secret Values (unchanged)
+
 resource "aws_secretsmanager_secret_version" "source_credentials" {
   secret_id = aws_secretsmanager_secret.source_db_credentials.id
   secret_string = jsonencode({
