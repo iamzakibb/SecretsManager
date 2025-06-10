@@ -12,7 +12,7 @@ resource "aws_iam_role" "target_dms_role" {
       Principal = {
         Service = "dms.amazonaws.com"
       },
-      Action = "stS:AssumeRole"
+      Action = "sts:AssumeRole"
     }]
   })
 }
