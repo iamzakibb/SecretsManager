@@ -39,7 +39,7 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
         Resource = "*",
         Condition = {
           StringEquals = {
-            "aws:PrincipalOrgID" = "o-a10ef4812"
+            "aws:PrincipalOrgID" = "o-ai0eff4812"
           }
         }
       },
@@ -132,10 +132,13 @@ resource "aws_kms_key" "secrets_kms_key" {
         Resource = "*"
       },
       {
-        Sid    = "AllowKnownAccounts",
+        Sid    = "AllowOrganizationAccess",
         Effect = "Allow",
         Principal = "*",
-        Action = "kms:*",
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ],
         Resource = "*",
         Condition = {
           StringEquals = {
@@ -144,16 +147,14 @@ resource "aws_kms_key" "secrets_kms_key" {
         }
       },
       {
-        Sid       = "DenyEverythingElse",
+        Sid       = "DenyExternalAccess",
         Effect    = "Deny",
         Principal = "*",
         Action    = "kms:*",
         Resource  = "*",
         Condition = {
-          "Not": {
-            "StringEquals": {
-              "aws:PrincipalOrgID": "o-ai0eff4812"
-            }
+          StringNotEquals = {
+            "aws:PrincipalOrgID" = "o-ai0eff4812"
           }
         }
       }
