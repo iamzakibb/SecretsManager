@@ -1,7 +1,7 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# 1. Create IAM Roles
+# 1. Create IAM Roles (unchanged)
 resource "aws_iam_role" "target_dms_role" {
   name = "adt-edm-dms-service-target-role"
 
@@ -12,12 +12,12 @@ resource "aws_iam_role" "target_dms_role" {
       Principal = {
         Service = "dms.amazonaws.com"
       },
-      Action = "sts:AssumeRole"
+      Action = "stS:AssumeRole"
     }]
   })
 }
 
-# 2. Secrets Managers
+# 2. Secrets Managers with OrgID Conditions
 resource "aws_secretsmanager_secret" "source_db_credentials" {
   name        = "dms-db-credentials-source"
   kms_key_id  = aws_kms_key.secrets_kms_key.arn
@@ -39,7 +39,7 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
         Resource = "*",
         Condition = {
           StringEquals = {
-            "aws:PrincipalAccount" = "198895713261"
+            "aws:PrincipalOrgID" = "o-a10ef4812"
           }
         }
       },
@@ -53,7 +53,7 @@ resource "aws_secretsmanager_secret" "source_db_credentials" {
         Resource = "*",
         Condition = {
           StringEquals = {
-            "aws:PrincipalAccount" = "198895713261"
+            "aws:PrincipalOrgID" = "o-ai0eff4812"
           }
         }
       }
@@ -85,7 +85,7 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
   })
 }
 
-# 3. Fixed KMS Key Policy
+# 3. KMS Key Policy with OrgID Conditions
 resource "aws_kms_key" "secrets_kms_key" {
   description         = "KMS key for encrypting Secrets Manager secrets"
   enable_key_rotation = true
@@ -115,7 +115,7 @@ resource "aws_kms_key" "secrets_kms_key" {
         Resource = "*",
         Condition = {
           StringEquals = {
-            "aws:PrincipalAccount" = "198895713261"
+            "aws:PrincipalOrgID" = "o-ai0eff4812"
           }
         }
       },
@@ -132,7 +132,6 @@ resource "aws_kms_key" "secrets_kms_key" {
         Resource = "*"
       },
       {
-        # CRITICAL FIX: Explicitly allow only known accounts
         Sid    = "AllowKnownAccounts",
         Effect = "Allow",
         Principal = "*",
@@ -140,15 +139,11 @@ resource "aws_kms_key" "secrets_kms_key" {
         Resource = "*",
         Condition = {
           StringEquals = {
-            "aws:PrincipalAccount" = [
-              data.aws_caller_identity.current.account_id,
-              "198895713261"
-            ]
+            "aws:PrincipalOrgID" = "o-ai0eff4812"
           }
         }
       },
       {
-        # CRITICAL FIX: Deny everything else
         Sid       = "DenyEverythingElse",
         Effect    = "Deny",
         Principal = "*",
@@ -157,10 +152,7 @@ resource "aws_kms_key" "secrets_kms_key" {
         Condition = {
           "Not": {
             "StringEquals": {
-              "aws:PrincipalAccount": [
-                data.aws_caller_identity.current.account_id,
-                "198895713261"
-              ]
+              "aws:PrincipalOrgID": "o-ai0eff4812"
             }
           }
         }
@@ -169,7 +161,7 @@ resource "aws_kms_key" "secrets_kms_key" {
   })
 }
 
-# 4. Secret Values
+# 4. Secret Values (unchanged)
 resource "aws_secretsmanager_secret_version" "source_credentials" {
   secret_id = aws_secretsmanager_secret.source_db_credentials.id
   secret_string = jsonencode({
