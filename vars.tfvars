@@ -1,13 +1,13 @@
 
 
 # Source Database Configuration
-source_db_username = "dms_user"
-source_db_password = "s3swwv!yehs68w"
-source_db_port     = 1433
-source_db_host     = "fr3dwvads006.rb.win.frb.org"
+source_db_username = ""
+source_db_password = ""
+source_db_port     = 1234
+source_db_host     = ""
 
 # Target Database Configuration
-target_db_username = "target_user"
-target_db_password = "target_password"
+target_db_username = ""
+target_db_password = ""
 target_db_port     = 5432
-target_db_host     = "infobank-postgresql-instance-1.cdnc1tcvpqk1.us-gov-west-1.rds.amazonaws.com"
+target_db_host     = ""
