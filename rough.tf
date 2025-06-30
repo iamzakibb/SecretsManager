@@ -88,7 +88,10 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
         Principal = {
           AWS = "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
         },
-        Action = ["secretsmanager:DescribeSecret"],
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
         Resource = "*",
         Condition = {
           StringEquals = {
