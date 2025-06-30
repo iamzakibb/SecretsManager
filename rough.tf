@@ -73,7 +73,7 @@ resource "aws_secretsmanager_secret" "target_db_credentials" {
         Sid    = "AllowTargetRoleAccess",
         Effect = "Allow",
         Principal = {
-          AWS = aws_iam_role.target_dms_role.arn
+          AWS = "arn:aws-us-gov:iam::198895713261:role/cfs-landing-zone-deploy-role"
         },
         Action = [
           "secretsmanager:GetSecretValue",
